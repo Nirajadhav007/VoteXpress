@@ -1,9 +1,4 @@
 node_modules/
 .env
-.env.local
-.env.production
-.env.development
-build/
 dist/
-.vscode/
-*.log
+.DS_Store
