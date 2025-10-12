@@ -1,3 +1,15 @@
+<<<<<<< HEAD
 
 node_modules/
 .env
+=======
+node_modules/
+.env
+.env.local
+.env.production
+.env.development
+build/
+dist/
+.vscode/
+*.log
+>>>>>>> 4d56853 (Remove .env and node_modules from tracking and add to .gitignore)
