@@ -1,6 +1,6 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { AuthContext } from "./context/AuthContext";
-import socketIOClient from "socket.io-client";
+import { io } from "socket.io-client";
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,8 +13,13 @@ import LoginPage from "./components/LoginPage";
 import AdminPanel from "./components/AdminPanel";
 import RegisterPage from "./components/RegisterPage";
 
-// ✅ Check environment variable
-console.log("API Base URL:", process.env.REACT_APP_API);
+// ✅ Backend URL
+const BACKEND_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://votexpressbackend.onrender.com"
+    : "http://localhost:3001";
+
+console.log("🌍 Using backend:", BACKEND_URL);
 
 function App() {
   const { user, logout, login, setUser } = useContext(AuthContext);
@@ -27,59 +32,78 @@ function App() {
     type: "info",
   });
 
-  // ✅ Socket connection
-  const socket = socketIOClient(process.env.REACT_APP_API, {
-    transports: ["websocket"],
-    withCredentials: true,
-  });
+  // ✅ Keep socket in a ref to avoid reconnecting on every render
+  const socketRef = useRef(null);
 
-  // ✅ Fetch votes from backend
+  // ✅ Initialize socket only once
+  useEffect(() => {
+    socketRef.current = io(BACKEND_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+
+    socketRef.current.on("connect", () =>
+      console.log("✅ Connected to WebSocket:", socketRef.current.id)
+    );
+
+    socketRef.current.on("connect_error", (err) =>
+      console.error("❌ WebSocket connect error:", err.message)
+    );
+
+    return () => {
+      socketRef.current.disconnect();
+      console.log("🔌 Disconnected WebSocket");
+    };
+  }, []);
+
+  // ✅ Fetch votes
   const fetchVotes = async () => {
     try {
-      const API_URL = `${process.env.REACT_APP_API}/api/votes`; // ✅ Fixed variable name
-      console.log("Fetching from:", API_URL);
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error("Failed to fetch votes");
-
-      const data = await response.json();
+      const res = await fetch(`${BACKEND_URL}/api/votes`);
+      if (!res.ok) throw new Error(`Failed to fetch votes (${res.status})`);
+      const data = await res.json();
       setVotes(data);
-    } catch (error) {
-      console.error("Error fetching votes:", error);
-      setError(error?.message || "Something went wrong");
+    } catch (err) {
+      console.error("Error fetching votes:", err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ✅ Listen for live updates
   useEffect(() => {
     fetchVotes();
 
-    // ✅ Real-time updates from backend
+    if (!socketRef.current) return;
+
+    const socket = socketRef.current;
+
     socket.on("voteUpdated", (updatedVote) => {
       setVotes((prev) =>
-        prev.map((v) => (v?._id === updatedVote?._id ? updatedVote : v))
+        prev.map((v) => (v._id === updatedVote._id ? updatedVote : v))
       );
-      showNotification("Vote Updated!", "info");
+      showNotification("Vote updated!", "info");
     });
 
     socket.on("voteCreated", (newVote) => {
       setVotes((prev) => [...prev, newVote]);
-      showNotification("New Vote option added!", "success");
+      showNotification("New vote option added!", "success");
     });
 
     socket.on("voteDeleted", (voteId) => {
-      setVotes((prev) => prev.filter((item) => item._id !== voteId));
+      setVotes((prev) => prev.filter((v) => v._id !== voteId));
       showNotification("Vote deleted successfully!", "success");
     });
 
-    // ✅ Cleanup
     return () => {
       socket.off("voteUpdated");
       socket.off("voteCreated");
       socket.off("voteDeleted");
     };
-  }, []); // Run once
+  }, []);
 
+  // ✅ Notification function
   const showNotification = (message, type) => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ ...notification, show: false }), 3000);
