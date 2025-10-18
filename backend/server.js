@@ -1,54 +1,61 @@
+// ✅ server.js
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDatabase = require("./config/connection");
-const {
-  register,
-  login,
-  userDetails,
-} = require("./controllers/user.controller");
+const { register, login, userDetails } = require("./controllers/user.controller");
 const authenticate = require("./middlewares/auth");
-const Vote = require("./models/vote.model");
 const isAdmin = require("./middlewares/adminAuth");
+const Vote = require("./models/vote.model");
 const User = require("./models/user.model");
 
-// ✅ Load environment variables
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-
-// ✅ Environment setup
 const PORT = process.env.PORT || 3001;
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 
-// ✅ Database connection
+// ✅ Allowed Origins
+const allowedOrigins = [
+  "http://localhost:3000",
+    /^http:\/\/192\.168\.\d+\.\d+:3000$/,
+  "https://votexpress-fron.onrender.com", // your frontend domain
+];
+
+// ✅ Database Connection
 connectDatabase();
 
-// ✅ CORS configuration
+// ✅ CORS Setup
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = "The CORS policy does not allow this origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     methods: ["GET", "POST", "DELETE", "PUT"],
     credentials: true,
   })
 );
 
-// ✅ JSON parser
+// ✅ JSON Parser
 app.use(express.json());
 
-// ✅ Socket.io setup
+// ✅ Socket.io Setup
 const io = socketIo(server, {
   cors: {
-    origin: CLIENT_URL,
-    methods: ["GET", "POST"],
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "DELETE", "PUT"],
     credentials: true,
   },
 });
 
-// ✅ Root route (for testing)
+// ✅ Test Route
 app.get("/", (req, res) => {
   res.json({ message: "API running successfully 🎉" });
 });
@@ -64,7 +71,7 @@ app.get("/api/me", authenticate, userDetails);
 // 🗳️ VOTE ROUTES
 // ========================
 
-// ➕ Create new vote (Admin only)
+// ➕ Create vote (Admin)
 app.post("/api/votes", authenticate, isAdmin, async (req, res) => {
   try {
     const { option } = req.body;
@@ -92,12 +99,12 @@ app.get("/api/votes", async (req, res) => {
   }
 });
 
-// 🗳️ Cast a vote (user)
+// 🗳️ Cast a vote (User)
 app.post("/api/vote/:id", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if user already voted
+    // check if user already voted
     if (req.user.votedFor) {
       return res.status(400).json({ error: "You have already voted" });
     }
@@ -121,14 +128,14 @@ app.post("/api/vote/:id", authenticate, async (req, res) => {
   }
 });
 
-// ❌ Delete a vote (Admin only)
+// ❌ Delete vote (Admin)
 app.delete("/api/vote/:id", authenticate, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await Vote.findByIdAndDelete(id);
 
     io.emit("voteDeleted", id);
-    res.status(200).json({ message: "Vote deleted successfully", success: true });
+    res.status(200).json({ message: "Vote deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -138,7 +145,7 @@ app.delete("/api/vote/:id", authenticate, isAdmin, async (req, res) => {
 // 🔌 SOCKET.IO EVENTS
 // ========================
 io.on("connection", (socket) => {
-  console.log("🟢 New client connected:", socket.id);
+  console.log("🟢 Client connected:", socket.id);
 
   socket.on("disconnect", () => {
     console.log("🔴 Client disconnected:", socket.id);
@@ -146,8 +153,8 @@ io.on("connection", (socket) => {
 });
 
 // ========================
-// 🚀 SERVER START
+// 🚀 START SERVER
 // ========================
 server.listen(PORT, () => {
-  console.log(`✅ Server running at port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
