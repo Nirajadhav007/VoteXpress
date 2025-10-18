@@ -14,10 +14,8 @@ import AdminPanel from "./components/AdminPanel";
 import RegisterPage from "./components/RegisterPage";
 
 // ✅ Backend URL
-const BACKEND_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://votexpressbackend.onrender.com"
-    : "http://localhost:3001";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:3001";
+
 
 console.log("🌍 Using backend:", BACKEND_URL);
 
@@ -105,9 +103,12 @@ function App() {
 
   // ✅ Notification function
   const showNotification = (message, type) => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ ...notification, show: false }), 3000);
-  };
+  setNotification({ show: true, message, type });
+  setTimeout(() => {
+    setNotification(prev => ({ ...prev, show: false }));
+  }, 3000);
+};
+
 
   if (isLoading) return <div className="loading">Loading...</div>;
 

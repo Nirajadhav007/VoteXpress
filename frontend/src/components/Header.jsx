@@ -1,20 +1,18 @@
-
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import '../index.css';
-
+import "../index.css";
 
 const Header = ({ user, logout, showNotification }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    showNotification("Logout successfully", "success");
+    showNotification("Logout successful ✅", "success");
     navigate("/");
   };
 
   return (
-    <header className={`app-header`}>
+    <header className="app-header">
       <h1 className="logo">
         <Link to="/">Real-Time Voting System</Link>
       </h1>
@@ -24,14 +22,20 @@ const Header = ({ user, logout, showNotification }) => {
           <>
             <span className="user-email">
               <span className="welcome">Welcome, </span>
-              {user?.username}
+              <strong>{user.username}</strong>
             </span>
-            {user?.role === "admin" && 
+
+            {user?.role === "admin" && (
               <Link to="/admin" className="auth-link admin-link">
                 Admin
               </Link>
-            }
-            <button className="logout-btn" onClick={handleLogout}>
+            )}
+
+            <button
+              className="logout-btn"
+              onClick={handleLogout}
+              title="Logout"
+            >
               Logout
             </button>
           </>
