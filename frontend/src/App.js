@@ -14,7 +14,7 @@ import AdminPanel from "./components/AdminPanel";
 import RegisterPage from "./components/RegisterPage";
 
 // ✅ Backend URL
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://votexpress-1.onrender.com";
 
 
 console.log("🌍 Using backend:", BACKEND_URL);
