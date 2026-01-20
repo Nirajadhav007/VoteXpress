@@ -21,7 +21,8 @@ const RegisterPage = ({ login, showNotification }) => {
     event.preventDefault();
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/register`,
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/register`,
+
         {
           method: "POST",
           headers: {

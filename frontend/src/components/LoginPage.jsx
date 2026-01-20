@@ -20,7 +20,7 @@ const LoginPage = ({ login, showNotification }) => {
     event.preventDefault();
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/login`,
+        `${process.env.REACT_APP_BACKEND_URL}/api/auth/login`,
         {
           method: "POST",
           headers: {
